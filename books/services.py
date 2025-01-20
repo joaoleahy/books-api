@@ -13,10 +13,13 @@ def cache_book_info(func):
     """Decorator to cache book information."""
     @wraps(func)
     def wrapper(isbn: str) -> Optional[Dict[str, Any]]:
-        cache_key = f'book:{isbn}'  # Padrão simples e consistente
+        cache_key = f'book:{isbn}'
         logger.info(f"Checking cache for key: {cache_key}")
         
         try:
+            redis_client = get_redis_connection("default")
+            logger.info(f"Current Redis keys: {redis_client.keys('*')}")
+            
             cached_data = cache.get(cache_key)
             logger.info(f"Cache lookup result for {cache_key}: {'HIT' if cached_data else 'MISS'}")
             
@@ -33,6 +36,17 @@ def cache_book_info(func):
                     result,
                     timeout=getattr(settings, 'CACHE_TTL', 86400)
                 )
+                
+                verification = cache.get(cache_key)
+                logger.info(f"Cache verification - Key exists: {verification is not None}")
+                
+                redis_client.set(
+                    f"direct:{cache_key}",
+                    json.dumps(result),
+                    ex=86400
+                )
+                
+                logger.info(f"After caching - Redis keys: {redis_client.keys('*')}")
             else:
                 logger.warning(f"No data to cache for ISBN {isbn}")
                 
