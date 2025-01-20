@@ -3,23 +3,44 @@ from typing import Optional, Dict, Any
 from functools import wraps
 from django.core.cache import cache
 from django.conf import settings
+import logging
+import json
+from django_redis import get_redis_connection
 
+logger = logging.getLogger(__name__)
 
 def cache_book_info(func):
     """Decorator to cache book information."""
     @wraps(func)
     def wrapper(isbn: str) -> Optional[Dict[str, Any]]:
-        cache_key = f'book_info_{isbn}'
-        cached_data = cache.get(cache_key)
+        cache_key = f'book:{isbn}'  # Padrão simples e consistente
+        logger.info(f"Checking cache for key: {cache_key}")
         
-        if cached_data is not None:
-            return cached_data
-        
-        result = func(isbn)
-        if result:
-            # Cache for 24 hours
-            cache.set(cache_key, result, timeout=86400)
-        return result
+        try:
+            cached_data = cache.get(cache_key)
+            logger.info(f"Cache lookup result for {cache_key}: {'HIT' if cached_data else 'MISS'}")
+            
+            if cached_data is not None:
+                return cached_data
+            
+            logger.info(f"Fetching data from API for ISBN {isbn}")
+            result = func(isbn)
+            
+            if result:
+                logger.info(f"Caching data for ISBN {isbn}")
+                cache.set(
+                    cache_key,
+                    result,
+                    timeout=getattr(settings, 'CACHE_TTL', 86400)
+                )
+            else:
+                logger.warning(f"No data to cache for ISBN {isbn}")
+                
+            return result
+            
+        except Exception as e:
+            logger.error(f"Cache error: {str(e)}", exc_info=True)
+            return func(isbn)
     
     return wrapper
 
@@ -42,20 +63,24 @@ class BookEnrichmentService:
             Dict with book information or None if not found
         """
         try:
+            logger.info(f"Making API request for ISBN: {isbn}")
             params = {'q': f'isbn:{isbn}'}
             response = requests.get(BookEnrichmentService.GOOGLE_BOOKS_API_URL, params=params)
             response.raise_for_status()
             
             try:
                 data = response.json()
+                logger.info("Successfully parsed API response")
             except (ValueError, TypeError) as e:
-                print(f"Error parsing JSON response: {e}")
+                logger.error(f"Error parsing JSON response: {e}")
                 return None
             
             if data.get('totalItems', 0) == 0:
+                logger.warning(f"No books found for ISBN: {isbn}")
                 return None
             
             volume_info = data['items'][0]['volumeInfo']
+            logger.info(f"Successfully retrieved book data for ISBN: {isbn}")
             
             return {
                 'title': volume_info.get('title'),
@@ -75,8 +100,8 @@ class BookEnrichmentService:
             }
             
         except requests.RequestException as e:
-            print(f"Error fetching book information: {e}")
+            logger.error(f"Error fetching book information: {e}")
             return None
         except (KeyError, IndexError) as e:
-            print(f"Error processing book data: {e}")
+            logger.error(f"Error processing book data: {e}")
             return None 
