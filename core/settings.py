@@ -96,9 +96,13 @@ CACHES = {
         'LOCATION': os.getenv('REDIS_URL', 'redis://redis:6379/1'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+        },
+        'KEY_PREFIX': 'books',
     }
 }
+
+# Cache time to live is 24 hours
+CACHE_TTL = 60 * 60 * 24
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -166,4 +170,34 @@ SPECTACULAR_SETTINGS = {
     },
     'COMPONENT_SPLIT_REQUEST': True,
     'SORT_OPERATIONS': False,
+}
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'books': {  # This will catch all loggers in the books app
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.cache': {  # This will log cache operations
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
 }
