@@ -10,5 +10,4 @@ pytest-django>=4.7.0
 pytest-cov>=4.1.0
 black>=23.11.0
 isort>=5.12.0
-mypy>=1.7.1
 drf-spectacular>=0.27.0,<0.28.0
