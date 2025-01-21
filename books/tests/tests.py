@@ -1,18 +1,21 @@
+import os
+from datetime import date
+from unittest.mock import Mock, patch
+
+import requests
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+
 from ..models import Book
 from ..services import BookEnrichmentService, cache_book_info
-from datetime import date
-from unittest.mock import patch, Mock
-import requests
-from django.core.cache import cache
-from django.conf import settings
-from django.contrib.auth import get_user_model
-import os
 
 User = get_user_model()
+
 
 class BookModelTests(TestCase):
     def setUp(self):
@@ -21,7 +24,7 @@ class BookModelTests(TestCase):
             author="J.R.R. Tolkien",
             isbn="9780261103573",
             description="An epic story",
-            published_date=date(1954, 7, 29)
+            published_date=date(1954, 7, 29),
         )
 
     def test_book_creation(self):
@@ -37,104 +40,103 @@ class BookModelTests(TestCase):
 class BookAPITests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
-            password='testpass123'
+            username="testuser", password="testpass123"
         )
         self.client.force_authenticate(user=self.user)
-        
+
         self.book_data = {
             "title": "The Hobbit",
             "author": "J.R.R. Tolkien",
             "isbn": "9780261102217",
             "description": "An unexpected journey",
-            "published_date": "1937-09-21"
+            "published_date": "1937-09-21",
         }
         self.book = Book.objects.create(**self.book_data)
 
     def test_list_books(self):
-        url = reverse('book-list')
+        url = reverse("book-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(len(response.data["results"]), 1)
 
     def test_create_book(self):
-        url = reverse('book-list')
+        url = reverse("book-list")
         data = {
             "title": "The Silmarillion",
             "author": "J.R.R. Tolkien",
             "isbn": "9780261102422",
             "description": "The history of Middle-earth",
-            "published_date": "1977-09-15"
+            "published_date": "1977-09-15",
         }
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Book.objects.count(), 2)
 
     def test_create_book_invalid_data(self):
-        url = reverse('book-list')
+        url = reverse("book-list")
         data = {
             "title": "",  # Empty title
             "author": "J.R.R. Tolkien",
             "isbn": "invalid-isbn",
             "description": "Test",
-            "published_date": "1977-09-15"
+            "published_date": "1977-09-15",
         }
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('title', response.data)
-        self.assertIn('isbn', response.data)
+        self.assertIn("title", response.data)
+        self.assertIn("isbn", response.data)
 
     def test_get_book_detail(self):
-        url = reverse('book-detail', args=[self.book.id])
+        url = reverse("book-detail", args=[self.book.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['title'], self.book_data['title'])
+        self.assertEqual(response.data["title"], self.book_data["title"])
 
     def test_get_nonexistent_book(self):
-        url = reverse('book-detail', args=[999])
+        url = reverse("book-detail", args=[999])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_update_book(self):
-        url = reverse('book-detail', args=[self.book.id])
+        url = reverse("book-detail", args=[self.book.id])
         data = {
             "title": "Updated Title",
-            "author": self.book_data['author'],
-            "isbn": self.book_data['isbn'],
+            "author": self.book_data["author"],
+            "isbn": self.book_data["isbn"],
             "description": "Updated description",
-            "published_date": self.book_data['published_date']
+            "published_date": self.book_data["published_date"],
         }
-        response = self.client.put(url, data, format='json')
+        response = self.client.put(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.book.refresh_from_db()
         self.assertEqual(self.book.title, "Updated Title")
 
     def test_delete_book(self):
-        url = reverse('book-detail', args=[self.book.id])
+        url = reverse("book-detail", args=[self.book.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Book.objects.count(), 0)
 
-    @patch('books.services.enrichment.BookEnrichmentService.get_book_info')
+    @patch("books.services.enrichment.BookEnrichmentService.get_book_info")
     def test_refresh_enriched_data(self, mock_get_book_info):
         mock_data = {
-            'title': 'The Hobbit',
-            'authors': ['J.R.R. Tolkien'],
-            'description': 'Enriched version'
+            "title": "The Hobbit",
+            "authors": ["J.R.R. Tolkien"],
+            "description": "Enriched version",
         }
         mock_get_book_info.return_value = mock_data
 
-        url = reverse('book-refresh-enriched-data', args=[self.book.id])
+        url = reverse("book-refresh-enriched-data", args=[self.book.id])
         response = self.client.post(url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.book.refresh_from_db()
         self.assertEqual(self.book.enriched_data, mock_data)
 
-    @patch('books.services.enrichment.BookEnrichmentService.get_book_info')
+    @patch("books.services.enrichment.BookEnrichmentService.get_book_info")
     def test_refresh_enriched_data_failure(self, mock_get_book_info):
         mock_get_book_info.return_value = None
-        url = reverse('book-refresh-enriched-data', args=[self.book.id])
+        url = reverse("book-refresh-enriched-data", args=[self.book.id])
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -144,43 +146,45 @@ class BookEnrichmentServiceTests(TestCase):
         cache.clear()
         self.isbn = "9780261102217"
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_get_book_info_success(self, mock_get):
         mock_response = Mock()
         mock_response.json.return_value = {
-            'items': [{
-                'volumeInfo': {
-                    'title': 'Test Book',
-                    'authors': ['Test Author'],
-                    'description': 'Test Description'
+            "items": [
+                {
+                    "volumeInfo": {
+                        "title": "Test Book",
+                        "authors": ["Test Author"],
+                        "description": "Test Description",
+                    }
                 }
-            }],
-            'totalItems': 1
+            ],
+            "totalItems": 1,
         }
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
         result = BookEnrichmentService.get_book_info(self.isbn)
         self.assertIsNotNone(result)
-        self.assertEqual(result['title'], 'Test Book')
+        self.assertEqual(result["title"], "Test Book")
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_get_book_info_no_results(self, mock_get):
         mock_response = Mock()
-        mock_response.json.return_value = {'totalItems': 0}
+        mock_response.json.return_value = {"totalItems": 0}
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
         result = BookEnrichmentService.get_book_info(self.isbn)
         self.assertIsNone(result)
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_get_book_info_request_error(self, mock_get):
         mock_get.side_effect = requests.RequestException()
         result = BookEnrichmentService.get_book_info(self.isbn)
         self.assertIsNone(result)
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_get_book_info_invalid_response(self, mock_get):
         mock_response = Mock()
         mock_response.json.side_effect = ValueError()
@@ -190,8 +194,8 @@ class BookEnrichmentServiceTests(TestCase):
         self.assertIsNone(result)
 
     def test_cache_decorator(self):
-        test_data = {'test': 'data'}
-        
+        test_data = {"test": "data"}
+
         @cache_book_info
         def mock_get_info(isbn):
             return test_data
@@ -202,5 +206,5 @@ class BookEnrichmentServiceTests(TestCase):
         result2 = mock_get_info(self.isbn)
         self.assertEqual(result2, test_data)
 
-        cached_data = cache.get(f'book:{self.isbn}')
+        cached_data = cache.get(f"book:{self.isbn}")
         self.assertEqual(cached_data, test_data)
