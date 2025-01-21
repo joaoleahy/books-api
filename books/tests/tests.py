@@ -9,7 +9,9 @@ from unittest.mock import patch, Mock
 import requests
 from django.core.cache import cache
 from django.conf import settings
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class BookModelTests(TestCase):
     def setUp(self):
@@ -33,6 +35,12 @@ class BookModelTests(TestCase):
 
 class BookAPITests(APITestCase):
     def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+        
         self.book_data = {
             "title": "The Hobbit",
             "author": "J.R.R. Tolkien",
@@ -193,5 +201,5 @@ class BookEnrichmentServiceTests(TestCase):
         result2 = mock_get_info(self.isbn)
         self.assertEqual(result2, test_data)
 
-        cached_data = cache.get(f'book_info_{self.isbn}')
+        cached_data = cache.get(f'book:{self.isbn}')
         self.assertEqual(cached_data, test_data)
