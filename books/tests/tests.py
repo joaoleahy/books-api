@@ -35,13 +35,11 @@ MOCK_BOOK_API_RESPONSE = {
                 "language": "en",
                 "previewLink": "http://books.google.com/preview",
                 "infoLink": "http://books.google.com/info",
-                "imageLinks": {
-                    "thumbnail": "http://books.google.com/image.jpg"
-                }
+                "imageLinks": {"thumbnail": "http://books.google.com/image.jpg"},
             }
         }
     ],
-    "totalItems": 1
+    "totalItems": 1,
 }
 
 
@@ -65,12 +63,14 @@ class BookModelTests(TestCase):
         self.assertEqual(self.book.enriched_data, test_data)
 
 
-@override_settings(CACHES={
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
     }
-})
+)
 class BookAPITests(APITestCase):
     def setUp(self):
         # Clear local test cache
@@ -97,8 +97,10 @@ class BookAPITests(APITestCase):
 
     @patch("books.services.enrichment.BookEnrichmentService.get_book_info")
     def test_create_book(self, mock_get_book_info):
-        mock_get_book_info.return_value = MOCK_BOOK_API_RESPONSE["items"][0]["volumeInfo"]
-        
+        mock_get_book_info.return_value = MOCK_BOOK_API_RESPONSE["items"][0][
+            "volumeInfo"
+        ]
+
         url = reverse("book-list")
         data = {
             "title": "The Silmarillion",
@@ -138,8 +140,10 @@ class BookAPITests(APITestCase):
 
     @patch("books.services.enrichment.BookEnrichmentService.get_book_info")
     def test_update_book(self, mock_get_book_info):
-        mock_get_book_info.return_value = MOCK_BOOK_API_RESPONSE["items"][0]["volumeInfo"]
-        
+        mock_get_book_info.return_value = MOCK_BOOK_API_RESPONSE["items"][0][
+            "volumeInfo"
+        ]
+
         url = reverse("book-detail", args=[self.book.id])
         data = {
             "title": "Updated Title",
@@ -161,7 +165,9 @@ class BookAPITests(APITestCase):
 
     @patch("books.services.enrichment.BookEnrichmentService.get_book_info")
     def test_refresh_enriched_data(self, mock_get_book_info):
-        mock_get_book_info.return_value = MOCK_BOOK_API_RESPONSE["items"][0]["volumeInfo"]
+        mock_get_book_info.return_value = MOCK_BOOK_API_RESPONSE["items"][0][
+            "volumeInfo"
+        ]
 
         url = reverse("book-refresh-enriched-data", args=[self.book.id])
         response = self.client.post(url)
@@ -170,7 +176,7 @@ class BookAPITests(APITestCase):
         self.book.refresh_from_db()
         self.assertEqual(
             self.book.enriched_data["title"],
-            MOCK_BOOK_API_RESPONSE["items"][0]["volumeInfo"]["title"]
+            MOCK_BOOK_API_RESPONSE["items"][0]["volumeInfo"]["title"],
         )
 
     @patch("books.services.enrichment.BookEnrichmentService.get_book_info")
@@ -181,12 +187,14 @@ class BookAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-@override_settings(CACHES={
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
     }
-})
+)
 class BookEnrichmentServiceTests(TestCase):
     def setUp(self):
         cache.clear()
@@ -201,7 +209,9 @@ class BookEnrichmentServiceTests(TestCase):
 
         result = BookEnrichmentService.get_book_info(self.isbn)
         self.assertIsNotNone(result)
-        self.assertEqual(result["title"], MOCK_BOOK_API_RESPONSE["items"][0]["volumeInfo"]["title"])
+        self.assertEqual(
+            result["title"], MOCK_BOOK_API_RESPONSE["items"][0]["volumeInfo"]["title"]
+        )
 
     @patch("requests.get")
     def test_get_book_info_no_results(self, mock_get):

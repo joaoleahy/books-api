@@ -13,25 +13,25 @@ logger = logging.getLogger(__name__)
 def is_valid_enriched_data(data: Dict[str, Any]) -> bool:
     """
     Validates if the enriched data is valid before caching.
-    
+
     Args:
         data: Dictionary with enriched data
-        
+
     Returns:
         bool indicating if the data is valid
     """
     if not data:
         return False
-        
+
     # Check required fields
     required_fields = ["title", "authors"]
     if not all(data.get(field) for field in required_fields):
         return False
-        
+
     # Check if data is not just empty test values
     if data.get("title") == "Test Book" and data.get("authors") == ["Test Author"]:
         return False
-        
+
     return True
 
 
@@ -48,11 +48,13 @@ def cache_book_info(func):
             logger.info(f"Current Redis keys: {redis_client.keys('*')}")
 
             cached_data = cache.get(cache_key)
-            
+
             if cached_data is not None:
                 # If cached data is not valid, invalidate the cache
                 if not is_valid_enriched_data(cached_data):
-                    logger.warning(f"Invalid cached data found for ISBN {isbn}. Invalidating cache.")
+                    logger.warning(
+                        f"Invalid cached data found for ISBN {isbn}. Invalidating cache."
+                    )
                     cache.delete(cache_key)
                     redis_client.delete(f"direct:{cache_key}")
                     cached_data = None
@@ -78,7 +80,9 @@ def cache_book_info(func):
 
                 logger.info(f"After caching - Redis keys: {redis_client.keys('*')}")
             else:
-                logger.warning(f"Invalid or empty data received for ISBN {isbn}. Not caching.")
+                logger.warning(
+                    f"Invalid or empty data received for ISBN {isbn}. Not caching."
+                )
 
             return result
 
