@@ -4,9 +4,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
-from .models import Book
+from ..models import Book
 from .serializers import BookSerializer
-from .services import BookEnrichmentService
+from ..services import BookEnrichmentService
 from typing import Any
 
 

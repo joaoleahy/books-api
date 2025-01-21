@@ -2,12 +2,13 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from .models import Book
-from .services import BookEnrichmentService, cache_book_info
+from ..models import Book
+from ..services import BookEnrichmentService, cache_book_info
 from datetime import date
 from unittest.mock import patch, Mock
 import requests
 from django.core.cache import cache
+from django.conf import settings
 
 
 class BookModelTests(TestCase):
@@ -105,7 +106,7 @@ class BookAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Book.objects.count(), 0)
 
-    @patch('books.services.BookEnrichmentService.get_book_info')
+    @patch('books.services.enrichment.BookEnrichmentService.get_book_info')
     def test_refresh_enriched_data(self, mock_get_book_info):
         mock_data = {
             'title': 'The Hobbit',
@@ -121,7 +122,7 @@ class BookAPITests(APITestCase):
         self.book.refresh_from_db()
         self.assertEqual(self.book.enriched_data, mock_data)
 
-    @patch('books.services.BookEnrichmentService.get_book_info')
+    @patch('books.services.enrichment.BookEnrichmentService.get_book_info')
     def test_refresh_enriched_data_failure(self, mock_get_book_info):
         mock_get_book_info.return_value = None
         url = reverse('book-refresh-enriched-data', args=[self.book.id])
