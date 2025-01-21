@@ -41,9 +41,7 @@ class BookEnrichmentService:
             except (ValueError, TypeError) as e:
                 logger.error(f"Error parsing JSON response: {e}")
                 return None
-
-            if data.get("totalItems", 0) == 0:
-                logger.warning(f"No books found for ISBN: {isbn}")
+            if not data.get("totalItems", 0) or "items" not in data:
                 return None
 
             volume_info = data["items"][0]["volumeInfo"]

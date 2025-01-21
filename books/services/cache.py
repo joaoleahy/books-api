@@ -10,6 +10,31 @@ from django_redis import get_redis_connection
 logger = logging.getLogger(__name__)
 
 
+def is_valid_enriched_data(data: Dict[str, Any]) -> bool:
+    """
+    Validates if the enriched data is valid before caching.
+    
+    Args:
+        data: Dictionary with enriched data
+        
+    Returns:
+        bool indicating if the data is valid
+    """
+    if not data:
+        return False
+        
+    # Check required fields
+    required_fields = ["title", "authors"]
+    if not all(data.get(field) for field in required_fields):
+        return False
+        
+    # Check if data is not just empty test values
+    if data.get("title") == "Test Book" and data.get("authors") == ["Test Author"]:
+        return False
+        
+    return True
+
+
 def cache_book_info(func):
     """Decorator to cache book information."""
 
@@ -23,18 +48,23 @@ def cache_book_info(func):
             logger.info(f"Current Redis keys: {redis_client.keys('*')}")
 
             cached_data = cache.get(cache_key)
-            logger.info(
-                f"Cache lookup result for {cache_key}: {'HIT' if cached_data else 'MISS'}"
-            )
-
+            
             if cached_data is not None:
-                return cached_data
+                # If cached data is not valid, invalidate the cache
+                if not is_valid_enriched_data(cached_data):
+                    logger.warning(f"Invalid cached data found for ISBN {isbn}. Invalidating cache.")
+                    cache.delete(cache_key)
+                    redis_client.delete(f"direct:{cache_key}")
+                    cached_data = None
+                else:
+                    logger.info(f"Cache HIT for {cache_key}")
+                    return cached_data
 
-            logger.info(f"Fetching data from API for ISBN {isbn}")
+            logger.info(f"Cache MISS for {cache_key}. Fetching data from API.")
             result = func(isbn)
 
-            if result:
-                logger.info(f"Caching data for ISBN {isbn}")
+            if result and is_valid_enriched_data(result):
+                logger.info(f"Caching valid data for ISBN {isbn}")
                 cache.set(
                     cache_key, result, timeout=getattr(settings, "CACHE_TTL", 86400)
                 )
@@ -48,7 +78,7 @@ def cache_book_info(func):
 
                 logger.info(f"After caching - Redis keys: {redis_client.keys('*')}")
             else:
-                logger.warning(f"No data to cache for ISBN {isbn}")
+                logger.warning(f"Invalid or empty data received for ISBN {isbn}. Not caching.")
 
             return result
 
