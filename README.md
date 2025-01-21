@@ -50,24 +50,25 @@ A robust REST API for managing books with automatic data enrichment from Google 
 - **Proxy Server**: Nginx
 - **Testing**: pytest
 
-## 🏗 Architecture
+## �� Architecture
 
 ```
-├── nginx/              # Nginx configuration
+books-api/
 ├── books/             # Main application
 │   ├── api/          # API endpoints
-│   │   ├── migrations/    # Database migrations
-│   │   ├── services/     # External services
-│   │   │   ├── cache.py  # Caching service
-│   │   │   └── enrichment.py  # Google Books integration
-│   │   ├── admin.py      # Admin interface
-│   │   ├── models.py     # Database models
-│   │   ├── serializers.py # API serializers
+│   │   ├── views.py      # API views
 │   │   ├── urls.py       # URL routing
-│   │   └── views.py      # API views
-│   ├── core/         # Core functionality
+│   │   └── serializers.py # API serializers
+│   ├── services/     # External services
+│   │   ├── cache.py      # Caching service
+│   │   └── enrichment.py # Google Books integration
+│   ├── models.py     # Database models
+│   ├── admin.py      # Admin interface
 │   └── tests/        # Test suites
-└── core/             # Project settings
+├── core/             # Project settings
+├── nginx/            # Nginx configuration
+├── docker-compose.yml
+└── requirements.txt
 ```
 
 ## 🚦 Getting Started
@@ -95,17 +96,17 @@ A robust REST API for managing books with automatic data enrichment from Google 
    docker compose up --build
    ```
 
-3. Run migrations:
+4. Run migrations:
 ```bash
 docker-compose exec web python manage.py migrate
 ```
 
-4. Create a superuser to access the admin interface:
+5. Create a superuser to access the admin interface:
 ```bash
 docker-compose exec web python manage.py createsuperuser
 ```
 
-5. Load sample data (optional):
+6. Load sample data (optional):
 ```bash
 docker-compose exec web python manage.py seed_books
 ```
@@ -190,28 +191,6 @@ There are two ways to obtain the JWT token for authentication:
 
 ## 🔧 Development
 
-### Project Structure
-
-```
-books-api/
-├── books/
-│   ├── migrations/    # Database migrations
-│   ├── services/     # External services
-│   │   ├── cache.py  # Caching service
-│   │   └── enrichment.py  # Google Books integration
-│   │   ├── admin.py      # Admin interface
-│   │   ├── models.py     # Database models
-│   │   ├── serializers.py # API serializers
-│   │   ├── urls.py       # URL routing
-│   │   └── views.py      # API views
-│   ├── core/             # Project settings
-│   ├── nginx/            # Nginx configuration
-│   ├── docker-compose.yml
-│   └── requirements.txt
-├── nginx/            # Nginx configuration
-└── docker-compose.yml
-```
-
 ### Running Tests
 
 The project has comprehensive test coverage with different types of tests:
@@ -232,7 +211,7 @@ docker-compose exec web coverage run -m pytest
 docker-compose exec web coverage report
 ```
 
-Current test coverage is 99%, which is excellent for a production project. The only 3 uncovered statements are specific error paths in the services layer that are challenging to simulate in tests, such as rare API response scenarios and specific JSON parsing errors.
+Current test coverage is 99%, which is excellent for a production project. The only uncovered statements are specific error paths in the services layer that are challenging to simulate in tests, such as rare API response scenarios and specific JSON parsing errors.
 
 Coverage by file:
 - `models.py`: 100%
