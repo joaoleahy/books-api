@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -10,6 +10,7 @@ import requests
 from django.core.cache import cache
 from django.conf import settings
 from django.contrib.auth import get_user_model
+import os
 
 User = get_user_model()
 

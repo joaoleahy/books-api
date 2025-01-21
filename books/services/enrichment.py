@@ -2,13 +2,15 @@ import requests
 import logging
 from typing import Optional, Dict, Any
 from .cache import cache_book_info
+from django.conf import settings
+import os
 
 logger = logging.getLogger(__name__)
 
 class BookEnrichmentService:
     """Service for enriching book data using Google Books API."""
     
-    GOOGLE_BOOKS_API_URL = 'https://www.googleapis.com/books/v1/volumes'
+    GOOGLE_BOOKS_API_URL = os.getenv('GOOGLE_BOOKS_API_URL')
     
     @staticmethod
     @cache_book_info
