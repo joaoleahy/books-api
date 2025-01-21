@@ -238,18 +238,28 @@ class BookEnrichmentServiceTests(TestCase):
         result = BookEnrichmentService.get_book_info(self.isbn)
         self.assertIsNone(result)
 
+    @patch("books.services.cache.get_redis_connection", Mock())
     def test_cache_decorator(self):
+        """Test that the cache decorator properly caches and retrieves data"""
         test_data = MOCK_BOOK_API_RESPONSE["items"][0]["volumeInfo"]
+        call_count = 0
 
         @cache_book_info
         def mock_get_info(isbn):
+            nonlocal call_count
+            call_count += 1
             return test_data
 
+        # First call - should execute the function
         result1 = mock_get_info(self.isbn)
         self.assertEqual(result1, test_data)
+        self.assertEqual(call_count, 1)
 
+        # Second call - should use cached data
         result2 = mock_get_info(self.isbn)
         self.assertEqual(result2, test_data)
+        # Call count should still be 1 because it used cache
+        self.assertEqual(call_count, 1)
 
-        cached_data = cache.get(f"book:{self.isbn}")
-        self.assertEqual(cached_data, test_data)
+        # Verify the data matches
+        self.assertEqual(result1, result2)
