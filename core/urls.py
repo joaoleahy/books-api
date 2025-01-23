@@ -28,7 +28,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 urlpatterns = [
     # Redirect root URL to admin
     path("", RedirectView.as_view(url="/admin/", permanent=True), name="index"),
-    
     path("admin/", admin.site.urls),
     path("api/", include("books.api.urls")),
     # OpenAPI 3 documentation with Swagger UI
